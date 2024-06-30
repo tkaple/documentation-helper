@@ -1,15 +1,8 @@
-from dotenv import load_dotenv
-
-load_dotenv()
-from typing import Set
-
+from backend.core import run_llm
 import streamlit as st
 from streamlit_chat import message
 
-from backend.core import run_llm
-
-
-def create_sources_string(source_urls: Set[str]) -> str:
+def create_sources_string(source_urls: set[str]) -> str:
     if not source_urls:
         return ""
     sources_list = list(source_urls)
@@ -19,8 +12,10 @@ def create_sources_string(source_urls: Set[str]) -> str:
         sources_string += f"{i+1}. {source}\n"
     return sources_string
 
+st.header("LangChain Chatbot")
 
-st.header("LangChain🦜🔗 Udemy Course- Helper Bot")
+prompt = st.text_input("Prompt", placeholder="Enter your prompt here")
+"""Maintain session states as within streamlit code runs in infinte loops"""
 if (
     "chat_answers_history" not in st.session_state
     and "user_prompt_history" not in st.session_state
@@ -31,27 +26,22 @@ if (
     st.session_state["chat_history"] = []
 
 
-prompt = st.text_input("Prompt", placeholder="Enter your message here...") or st.button(
-    "Submit"
-)
-
 if prompt:
-    with st.spinner("Generating response..."):
+    with st.spinner("Generating Response..."):
         generated_response = run_llm(
             query=prompt, chat_history=st.session_state["chat_history"]
         )
 
-        sources = set(doc.metadata["source"] for doc in generated_response["context"])
+        print(generated_response)
+
+        sources = set(doc.metadata["source"] for doc in generated_response["source_documents"])
 
         formatted_response = (
             f"{generated_response['answer']} \n\n {create_sources_string(sources)}"
         )
-
         st.session_state["user_prompt_history"].append(prompt)
         st.session_state["chat_answers_history"].append(formatted_response)
-        st.session_state["chat_history"].append(("human", prompt))
-        st.session_state["chat_history"].append(("ai", generated_response["answer"]))
-
+        st.session_state["chat_history"].append((prompt, generated_response["answer"]))
 
 if st.session_state["chat_answers_history"]:
     for generated_response, user_query in zip(
@@ -62,4 +52,4 @@ if st.session_state["chat_answers_history"]:
             user_query,
             is_user=True,
         )
-        message(generated_response)
+        message(generated_response)               
